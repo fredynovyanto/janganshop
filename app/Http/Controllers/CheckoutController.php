@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\Rating;
 use Illuminate\Support\Facades\Auth;
 use RealRashid\SweetAlert\Facades\Alert;
+use Midtrans;
 
 class CheckoutController extends Controller
 {
@@ -44,6 +45,9 @@ class CheckoutController extends Controller
         $order->pincode = $request->get('code');
         $order->payment_mode = $request->get('payment_mode');
         $order->payment_id = $request->get('payment_id');
+        $order->bank = $request->get('bank');
+        $order->payment_code = $request->get('va_number');
+        $order->order_id = $request->get('order_id');
         
         //menghitung total harga
         $total = 0;
@@ -137,5 +141,74 @@ class CheckoutController extends Controller
             'code'=> $code,
             'total_price' => $total_price,
         ]);
+    }
+
+    public function midtrans(CheckoutRequest $request)
+    {
+        // Set your Merchant Server Key
+        \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
+        // Set to Development/Sandbox Environment (default). Set to true for Production Environment (accept real transaction).
+        \Midtrans\Config::$isProduction = false;
+        // Set sanitization on (default)
+        \Midtrans\Config::$isSanitized = true;
+        // Set 3DS transaction for credit card to true
+        \Midtrans\Config::$is3ds = true;
+
+        // $carts = Cart::where('user_id', Auth::id())->get();
+        $carts = Cart::with('product')->where('user_id', Auth::id())->get();
+        $total_price = 0;
+        foreach($carts as $cart)
+        {
+            $total_price += $cart->product->selling_price * $cart->quantity;
+        }
+        
+        $params = array(
+            'transaction_details' => array(
+                'order_id' => "Mid-".rand(),
+                'gross_amount' => $total_price,
+            ),
+            
+            'item_details' => array(),
+            'customer_details' => array(
+                'first_name' => $request->get('fname'),
+                'last_name' => $request->get('lname'),
+                'email' => Auth::user()->email,
+                'phone' => $request->get('phone'),
+                'billing_address' => array(
+                    'first_name' => $request->get('fname'),
+                    'last_name' => $request->get('lname'),
+                    'email' => Auth::user()->email,
+                    'phone' => $request->get('phone'),
+                    'address' => $request->get('address'),
+                    'city' => $request->get('city'),
+                    'state' => $request->get('state'),
+                    'country' => $request->get('country'),
+                    'postal_code' => $request->get('code'),
+                    'country_code' => 'IDN'
+                ),
+                'shipping_address' => array(
+                    'first_name' => $request->get('fname'),
+                    'last_name' => $request->get('lname'),
+                    'email' => Auth::user()->email,
+                    'phone' => $request->get('phone'),
+                    'address' => $request->get('address'),
+                    'city' => $request->get('city'),
+                    'state' => $request->get('state'),
+                    'country' => $request->get('country'),
+                    'postal_code' => $request->get('code'),
+                    'country_code' => 'IDN'
+                )
+            ),
+        );
+        foreach($carts as $cart){
+            $params['item_details'][] = array(
+                "id" => $cart->product->id,
+                "price" => $cart->product->selling_price,
+                "quantity" => $cart->quantity,
+                "name" => $cart->product->name
+            );
+        }
+        $snapToken = \Midtrans\Snap::getSnapToken($params);
+        return response()->json(['snapToken' => $snapToken, 'params' => $params]);
     }
 }

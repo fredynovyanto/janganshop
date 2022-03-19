@@ -117,6 +117,7 @@
                     <input type="hidden" name="payment_mode" value="COD">
                     <button type="submit" class="btn btn-outline-dark mb-2">Order now</button>
                     <button type="button" class="btn btn-outline-primary mb-2 btn-razorpay">Razorpay</button>
+                    <button type="button" id="pay-button" class="btn btn-outline-success mb-2 btn-midtrans">Midtrans</button>
                     <div id="paypal-button-container"></div>
                     @else
                     <div class="text-center">
@@ -132,6 +133,110 @@
 @section('script')
     <script src="https://www.paypal.com/sdk/js?client-id=AR_9Zhf1zCEfDKHAA0dWlTLficrJSQQGI0qt7EYL-f5TLXMY3BuZoslgc9Xvk3ct5e5p618KAp6KASsF"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <!-- @TODO: replace SET_YOUR_CLIENT_KEY_HERE with your client key -->
+    <script type="text/javascript" src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="SB-Mid-client-DyFAZt-MZjFtoxaE"></script>
+    <!-- Note: replace with src="https://app.midtrans.com/snap/snap.js" for Production environment -->
+    <script>
+        $('.btn-midtrans').click(function(e){
+        e.preventDefault();
+
+        var data = {
+            'fname':$('#fname').val(),
+            'lname':$('#lname').val(),
+            'phone':$('#phone').val(),
+            'address':$('#address').val(),
+            'city':$('#city').val(),
+            'state':$('#state').val(),
+            'country':$('#country').val(),
+            'code':$('#code').val(),
+        }
+
+        $.ajax({
+            method: "POST",
+            url: "/midtrans",
+            data:data,
+            success: function(response){
+                let responses = response.params.customer_details.billing_address;
+                // Trigger snap popup. @TODO: Replace TRANSACTION_TOKEN_HERE with your transaction token
+                window.snap.pay(response.snapToken, {
+                    onSuccess: function(result){
+                        /* You may add your own implementation here */
+                        alert("payment success!"); console.log(result);
+                    },
+                    onPending: function(result){
+                        /* You may add your own implementation here */
+                        $.ajax({
+                            method: "POST",
+                            url: "/order",
+                            data: {
+                                'fname':responses.first_name,
+                                'lname':responses.last_name,
+                                'email':responses.email,
+                                'phone':responses.phone,
+                                'address':responses.address,
+                                'city':responses.city,
+                                'state':responses.state,
+                                'country':responses.country,
+                                'code':responses.postal_code,
+                                'payment_mode':"Paid by Midtrans",
+                                'payment_id':result.transaction_id,
+                                'bank': result.va_numbers[0].bank,
+                                'va_number' : result.va_numbers[0].va_number,
+                                'order_id': result.order_id,
+                            },
+                            success: function(responsea){
+                                Swal.fire({
+                                    title : "Wating your payment!",
+                                    icon : "success",
+                                    toast: true,
+                                    position: 'top-right',
+                                    timer: 3000,
+                                    showConfirmButton: false,
+                                });
+                                window.location.href = "/my-orders";
+                            }
+                        });
+                    },
+                    onError: function(result){
+                        /* You may add your own implementation here */
+                        Swal.fire({
+                            title : "Payment failed!",
+                            icon : "error",
+                            toast: true,
+                            position: 'top-right',
+                            timer: 3000,
+                            showConfirmButton: false,
+                        });
+                        alert("payment failed!"); console.log(result);
+                    },
+                    onClose: function(){
+                        /* You may add your own implementation here */
+                        Swal.fire({
+                            title : "You closed the popup without finishing the payment",
+                            icon : "warning",
+                            toast: true,
+                            position: 'top-right',
+                            timer: 3000,
+                            showConfirmButton: false,
+                        });
+                    }
+                });
+            },
+            error: function(response){
+                if(response.status == 422){
+                    Swal.fire({
+                        title : "Please complete your basic detail!",
+                        icon : "error",
+                        toast: true,
+                        position: 'top-right',
+                        timer: 3000,
+                        showConfirmButton: false,
+                    });
+                }
+            }
+        });
+    });
+    </script>
     <script>
         paypal.Buttons({
             createOrder: function(data, actions) {

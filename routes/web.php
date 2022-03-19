@@ -54,6 +54,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('my-orders', [CheckoutController::class, 'userOrder'])->name('my-orders');
     Route::get('detail-order/{id}', [CheckoutController::class, 'view'])->name('view-order');
     Route::post('razorpay', [CheckoutController::class, 'razorpayOrder']);
+    Route::post('midtrans', [CheckoutController::class, 'midtrans']);
     Route::put('accept-order/{order}', [CheckoutController::class, 'orderAccepted'])->name('accept-order');
     
     Route::post('add-rating', [RatingController::class, 'store'])->name('add-rating');

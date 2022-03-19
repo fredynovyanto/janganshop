@@ -79,6 +79,16 @@
                                     <td class="font-weight-bold" colspan="3" style="border-top: none; padding-top:0;">Status:</td>
                                     <td class="font-weight-bold" style="border-top: none; padding-top:0;">{{$order->status}}</td>
                                 </tr>
+                                @if($order->bank !== null && $order->payment_code !== null)
+                                    <tr>
+                                        <td class="font-weight-bold" colspan="3" style="border-top: none; padding-top:0;">Bank:</td>
+                                        <td class="font-weight-bold" style="border-top: none; padding-top:0;">{{$order->bank}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-weight-bold" colspan="3" style="border-top: none; padding-top:0;">Va Number:</td>
+                                        <td class="font-weight-bold" style="border-top: none; padding-top:0;">{{$order->payment_code}}</td>
+                                    </tr>
+                                @endif
                             </tfoot>
                         </table>
                     </div>

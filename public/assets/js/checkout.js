@@ -5,6 +5,12 @@ $(document).ready(function (){
         }
     });
 
+    $('.btn-midtrans').click(function(e){
+        e.preventDefault();
+        console.log('test');
+        alert('test');
+    });
+
     $('.btn-razorpay').click(function(e) {
         e.preventDefault();
 
